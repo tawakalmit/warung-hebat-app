@@ -12,7 +12,7 @@ import Input from '../../components/Input';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function SettingsScreen({ navigation }: any) {
-  const { user, logout, isOwner } = useAuth();
+  const { user, logout, isOwner, canExportData, canAccessStoreSettings } = useAuth();
   const { currentTheme, setTheme, themes } = useTheme();
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
@@ -75,6 +75,10 @@ export default function SettingsScreen({ navigation }: any) {
   }
 
   async function handleSave() {
+    if (!canAccessStoreSettings()) {
+      Alert.alert('Akses Ditolak', 'Hanya akun Owner yang berhak mengubah pengaturan toko.');
+      return;
+    }
     setLoading(true);
     try {
       const db = await getDatabase();
@@ -157,6 +161,44 @@ export default function SettingsScreen({ navigation }: any) {
           </View>
         )}
 
+        {/* Read-only Store Info for Kasir */}
+        {!isOwner() && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Informasi Toko</Text>
+            <View style={styles.sectionCard}>
+              <View style={styles.storeInfoItem}>
+                <Text style={styles.storeInfoLabel}>Nama Toko</Text>
+                <Text style={styles.storeInfoValue}>{storeName}</Text>
+              </View>
+              {address ? (
+                <View style={styles.storeInfoItem}>
+                  <Text style={styles.storeInfoLabel}>Alamat</Text>
+                  <Text style={styles.storeInfoValue}>{address}</Text>
+                </View>
+              ) : null}
+              {phone ? (
+                <View style={styles.storeInfoItem}>
+                  <Text style={styles.storeInfoLabel}>No. Telepon</Text>
+                  <Text style={styles.storeInfoValue}>{phone}</Text>
+                </View>
+              ) : null}
+              {footerNote ? (
+                <View style={styles.storeInfoItem}>
+                  <Text style={styles.storeInfoLabel}>Catatan Struk</Text>
+                  <Text style={styles.storeInfoValue}>{footerNote}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.roleNoticeBox}>
+                <Ionicons name="lock-closed-outline" size={16} color={COLORS.textSecondary} />
+                <Text style={styles.roleNoticeText}>
+                  Pengaturan toko dan identitas nota hanya dapat diedit oleh akun Owner.
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Theme Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tema Warna</Text>
@@ -196,13 +238,15 @@ export default function SettingsScreen({ navigation }: any) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Lainnya</Text>
           <View style={styles.menuCard}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ExportImport')}>
-              <View style={[styles.menuIcon, { backgroundColor: '#E8F0FE' }]}>
-                <Ionicons name="swap-horizontal-outline" size={20} color={themeColor} />
-              </View>
-              <Text style={styles.menuText}>Export / Import Data</Text>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
-            </TouchableOpacity>
+            {canExportData() && (
+              <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ExportImport')}>
+                <View style={[styles.menuIcon, { backgroundColor: '#E8F0FE' }]}>
+                  <Ionicons name="swap-horizontal-outline" size={20} color={themeColor} />
+                </View>
+                <Text style={styles.menuText}>Export / Import Data</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+              </TouchableOpacity>
+            )}
 
             {isOwner() && (
               <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ManageUsers')}>
@@ -214,13 +258,15 @@ export default function SettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Suppliers')}>
-              <View style={[styles.menuIcon, { backgroundColor: '#E6F4EA' }]}>
-                <Ionicons name="business-outline" size={20} color={COLORS.success} />
-              </View>
-              <Text style={styles.menuText}>Kelola Supplier</Text>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
-            </TouchableOpacity>
+            {isOwner() && (
+              <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Suppliers')}>
+                <View style={[styles.menuIcon, { backgroundColor: '#E6F4EA' }]}>
+                  <Ionicons name="business-outline" size={20} color={COLORS.success} />
+                </View>
+                <Text style={styles.menuText}>Kelola Supplier</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.menuItem, { borderBottomWidth: 0 }]}
@@ -451,5 +497,35 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     marginBottom: SPACING.xl,
     letterSpacing: 0.4,
+  },
+  storeInfoItem: {
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  storeInfoLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  storeInfoValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.onSurface,
+  },
+  roleNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainer,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    gap: SPACING.xs,
+    marginTop: SPACING.md,
+  },
+  roleNoticeText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    flex: 1,
+    lineHeight: 16,
   },
 });

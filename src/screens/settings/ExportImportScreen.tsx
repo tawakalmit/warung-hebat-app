@@ -6,11 +6,33 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { getDatabase } from '../../database/database';
 import Button from '../../components/Button';
+import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
-export default function ExportImportScreen() {
+export default function ExportImportScreen({ navigation }: any) {
+  const { canExportData } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+
+  if (!canExportData()) {
+    return (
+      <View style={styles.accessDenied}>
+        <View style={styles.lockIconBox}>
+          <Ionicons name="lock-closed" size={48} color={COLORS.danger} />
+        </View>
+        <Text style={styles.accessDeniedTitle}>Akses Khusus Owner</Text>
+        <Text style={styles.accessDeniedDesc}>
+          Fitur Export & Import data mengandung data transaksi, stok, dan akun warung. Fitur ini hanya dapat diakses oleh akun dengan peran Owner.
+        </Text>
+        <Button
+          title="Kembali"
+          variant="outlined"
+          onPress={() => navigation?.goBack()}
+          style={{ marginTop: SPACING.lg, minWidth: 140 }}
+        />
+      </View>
+    );
+  }
 
   async function handleExport() {
     setExporting(true);
@@ -235,5 +257,34 @@ const styles = StyleSheet.create({
     color: COLORS.onPrimaryContainer,
     lineHeight: 18,
     letterSpacing: 0.25,
+  },
+  accessDenied: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.xl,
+  },
+  lockIconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FCE8E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  accessDeniedTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginBottom: SPACING.xs,
+  },
+  accessDeniedDesc: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
+    maxWidth: 280,
   },
 });

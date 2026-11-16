@@ -7,9 +7,11 @@ import { generateId } from '../../utils/helpers';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import BarcodeScanner from '../../components/BarcodeScanner';
+import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 
 export default function AddProductScreen({ navigation, route }: any) {
+  const { canManageProducts } = useAuth();
   const editProduct = route?.params?.product;
   const [name, setName] = useState(editProduct?.name || '');
   const [barcode, setBarcode] = useState(editProduct?.barcode || route?.params?.barcode || '');
@@ -24,8 +26,16 @@ export default function AddProductScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!canManageProducts()) {
+      Alert.alert(
+        'Akses Ditolak',
+        'Hanya akun Owner yang berhak menambah atau mengubah data produk.',
+        [{ text: 'Kembali', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
     loadCategories();
-  }, []);
+  }, [canManageProducts]);
 
   async function loadCategories() {
     const db = await getDatabase();
@@ -34,6 +44,10 @@ export default function AddProductScreen({ navigation, route }: any) {
   }
 
   async function handleSave() {
+    if (!canManageProducts()) {
+      Alert.alert('Akses Ditolak', 'Hanya Owner yang berhak menyimpan data produk');
+      return;
+    }
     if (!name.trim()) {
       Alert.alert('Error', 'Nama produk harus diisi');
       return;

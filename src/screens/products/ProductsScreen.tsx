@@ -1,17 +1,30 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  Modal,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getDatabase } from '../../database/database';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/helpers';
 import EmptyState from '../../components/EmptyState';
+import Button from '../../components/Button';
+import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function ProductsScreen({ navigation }: any) {
+  const { isOwner, canManageProducts } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -34,6 +47,11 @@ export default function ProductsScreen({ navigation }: any) {
   }
 
   async function deleteProduct(product: Product) {
+    if (!canManageProducts()) {
+      Alert.alert('Akses Dibatasi', 'Hanya akun Owner yang berhak menghapus produk.');
+      return;
+    }
+
     Alert.alert(
       'Hapus Produk',
       `Yakin ingin menghapus "${product.name}"?`,
@@ -52,6 +70,25 @@ export default function ProductsScreen({ navigation }: any) {
     );
   }
 
+  function handleProductPress(product: Product) {
+    if (canManageProducts()) {
+      navigation.navigate('AddProduct', { product });
+    } else {
+      setSelectedProduct(product);
+    }
+  }
+
+  function handleProductLongPress(product: Product) {
+    if (canManageProducts()) {
+      deleteProduct(product);
+    } else {
+      Alert.alert(
+        'Akses Terbatas',
+        'Akun Kasir hanya dapat melihat katalog. Pengubahan & penghapusan produk hanya dapat dilakukan oleh Owner.'
+      );
+    }
+  }
+
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.barcode && p.barcode.includes(search))
@@ -63,8 +100,8 @@ export default function ProductsScreen({ navigation }: any) {
     return (
       <TouchableOpacity
         style={styles.productCard}
-        onPress={() => navigation.navigate('AddProduct', { product: item })}
-        onLongPress={() => deleteProduct(item)}
+        onPress={() => handleProductPress(item)}
+        onLongPress={() => handleProductLongPress(item)}
         activeOpacity={0.7}
       >
         <View style={styles.productAvatar}>
@@ -96,12 +133,22 @@ export default function ProductsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Search Bar - Google style */}
+      {/* Role Banner for Kasir */}
+      {!canManageProducts() && (
+        <View style={styles.roleBanner}>
+          <Ionicons name="information-circle-outline" size={18} color={COLORS.secondary} />
+          <Text style={styles.roleBannerText}>
+            Mode Kasir: Anda memiliki akses baca stok & harga katalog.
+          </Text>
+        </View>
+      )}
+
+      {/* Search Bar */}
       <View style={styles.searchBar}>
         <Ionicons name="search" size={20} color={COLORS.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cari produk"
+          placeholder="Cari produk berdasarkan nama atau barcode"
           value={search}
           onChangeText={setSearch}
           placeholderTextColor={COLORS.placeholder}
@@ -113,32 +160,111 @@ export default function ProductsScreen({ navigation }: any) {
         ) : null}
       </View>
 
-      {/* Product Count */}
-      <Text style={styles.countText}>{filteredProducts.length} produk</Text>
+      {/* Product Count & Info */}
+      <View style={styles.metaRow}>
+        <Text style={styles.countText}>{filteredProducts.length} produk</Text>
+        {canManageProducts() ? (
+          <Text style={styles.hintText}>Ketuk untuk edit • Tahan untuk hapus</Text>
+        ) : (
+          <Text style={styles.hintText}>Ketuk untuk detail</Text>
+        )}
+      </View>
 
       {/* Product List */}
       <FlatList
         data={filteredProducts}
         keyExtractor={item => item.id}
         renderItem={renderProduct}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          !canManageProducts() && { paddingBottom: SPACING.lg },
+        ]}
         ListEmptyComponent={
           <EmptyState
             icon="cube-outline"
             title="Belum ada produk"
-            subtitle="Ketuk + untuk menambahkan produk pertama"
+            subtitle={
+              canManageProducts()
+                ? 'Ketuk tombol + untuk menambahkan produk pertama'
+                : 'Belum ada produk yang terdaftar oleh Owner'
+            }
           />
         }
       />
 
-      {/* FAB - Material Design */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddProduct')}
-        activeOpacity={0.8}
+      {/* FAB - Hanya untuk Owner (Role: input produk) */}
+      {canManageProducts() && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('AddProduct')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={26} color={COLORS.textWhite} />
+        </TouchableOpacity>
+      )}
+
+      {/* Modal Detail Produk (Khusus Kasir View-Only) */}
+      <Modal
+        visible={!!selectedProduct}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedProduct(null)}
       >
-        <Ionicons name="add" size={24} color={COLORS.onPrimaryContainer} />
-      </TouchableOpacity>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.detailCard}>
+            <View style={styles.detailHeader}>
+              <View style={styles.detailTitleWrap}>
+                <Ionicons name="cube" size={22} color={COLORS.secondary} />
+                <Text style={styles.detailTitle} numberOfLines={1}>
+                  {selectedProduct?.name}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedProduct(null)}>
+                <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.detailBody}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Barcode</Text>
+                <Text style={styles.detailValue}>{selectedProduct?.barcode || 'Tidak ada barcode'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Harga Jual</Text>
+                <Text style={[styles.detailValue, styles.detailPrice]}>
+                  {selectedProduct ? formatCurrency(selectedProduct.sell_price) : ''}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Stok Tersedia</Text>
+                <Text style={[styles.detailValue, { fontWeight: '700' }]}>
+                  {selectedProduct?.stock} {selectedProduct?.unit}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Stok Minimum</Text>
+                <Text style={styles.detailValue}>
+                  {selectedProduct?.min_stock} {selectedProduct?.unit}
+                </Text>
+              </View>
+
+              <View style={styles.kasirNoteBox}>
+                <Ionicons name="lock-closed-outline" size={16} color={COLORS.textSecondary} />
+                <Text style={styles.kasirNoteText}>
+                  Pengubahan harga, stok masuk, atau data produk hanya dapat dilakukan oleh Owner toko.
+                </Text>
+              </View>
+            </View>
+
+            <Button
+              title="Tutup"
+              variant="tonal"
+              onPress={() => setSelectedProduct(null)}
+              style={styles.closeModalBtn}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -148,11 +274,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  roleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2F1',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    gap: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: '#B2DFDB',
+  },
+  roleBannerText: {
+    fontSize: 12,
+    color: '#00695C',
+    fontWeight: '500',
+    flex: 1,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerHigh,
     margin: SPACING.md,
+    marginBottom: SPACING.xs,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 2,
     borderRadius: BORDER_RADIUS.xl,
@@ -161,20 +304,30 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.text,
-    letterSpacing: 0.25,
+    color: COLORS.onSurface,
+    padding: 0,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.xs,
   },
   countText: {
     fontSize: 12,
+    fontWeight: '600',
     color: COLORS.textSecondary,
-    paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.sm,
-    letterSpacing: 0.4,
+  },
+  hintText: {
+    fontSize: 11,
+    color: COLORS.textTertiary,
   },
   listContent: {
-    paddingHorizontal: SPACING.md,
+    padding: SPACING.md,
+    paddingTop: 0,
     paddingBottom: 88,
-    flexGrow: 1,
   },
   productCard: {
     flexDirection: 'row',
@@ -183,56 +336,53 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.sm,
+    gap: SPACING.md,
     ...ELEVATION.level1,
   },
   productAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.full,
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   productAvatarText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.onPrimaryContainer,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   productInfo: {
     flex: 1,
-    marginLeft: SPACING.md,
   },
   productName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: COLORS.onSurface,
-    letterSpacing: 0.1,
   },
   productMeta: {
     fontSize: 12,
     color: COLORS.textSecondary,
     marginTop: 2,
-    letterSpacing: 0.4,
   },
   productPrice: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '700',
     color: COLORS.primary,
-    marginTop: 2,
+    marginTop: 3,
   },
   productStock: {
-    alignItems: 'center',
-    minWidth: 44,
+    alignItems: 'flex-end',
+    minWidth: 50,
   },
   stockText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.onSurfaceVariant,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.onSurface,
   },
   stockUnit: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    letterSpacing: 0.5,
   },
   lowStock: {
     color: COLORS.danger,
@@ -242,18 +392,90 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: COLORS.danger,
-    marginTop: 4,
+    marginTop: 2,
   },
   fab: {
     position: 'absolute',
     right: SPACING.md,
-    bottom: SPACING.md,
+    bottom: SPACING.lg,
     width: 56,
     height: 56,
     borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...ELEVATION.level3,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  detailCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    ...ELEVATION.level3,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingBottom: SPACING.sm,
+  },
+  detailTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    flex: 1,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  detailBody: {
+    paddingVertical: SPACING.md,
+    gap: SPACING.sm,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.onSurface,
+  },
+  detailPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  kasirNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainer,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  kasirNoteText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    flex: 1,
+    lineHeight: 15,
+  },
+  closeModalBtn: {
+    marginTop: SPACING.xs,
   },
 });

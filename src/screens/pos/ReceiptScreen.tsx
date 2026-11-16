@@ -23,7 +23,13 @@ export default function ReceiptScreen({ navigation, route }: any) {
 
   async function loadReceipt() {
     const db = await getDatabase();
-    const tx = await db.getFirstAsync<Transaction>('SELECT * FROM transactions WHERE id = ?', [transactionId]);
+    const tx = await db.getFirstAsync<Transaction & { cashier_name?: string }>(
+      `SELECT t.*, u.name as cashier_name 
+       FROM transactions t 
+       LEFT JOIN users u ON t.user_id = u.id 
+       WHERE t.id = ?`,
+      [transactionId]
+    );
     const txItems = await db.getAllAsync<TransactionItem>('SELECT * FROM transaction_items WHERE transaction_id = ?', [transactionId]);
     const settings = await db.getFirstAsync<StoreSettings>('SELECT * FROM store_settings WHERE id = ?', ['default']);
     setTransaction(tx);
@@ -94,7 +100,12 @@ export default function ReceiptScreen({ navigation, route }: any) {
             </View>
           </View>
 
-          <Text style={styles.date}>{formatDate(transaction.created_at)}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.date}>{formatDate(transaction.created_at)}</Text>
+            {(transaction as any).cashier_name && (
+              <Text style={styles.cashierText}>Kasir: {(transaction as any).cashier_name}</Text>
+            )}
+          </View>
 
           <View style={styles.divider} />
 
@@ -241,11 +252,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.3,
   },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   date: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: 4,
     letterSpacing: 0.4,
+  },
+  cashierText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.secondary,
   },
   divider: {
     height: 1,

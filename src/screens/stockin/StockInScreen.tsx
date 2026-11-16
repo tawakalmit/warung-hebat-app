@@ -12,7 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function StockInScreen({ navigation }: any) {
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState('');
@@ -51,10 +51,14 @@ export default function StockInScreen({ navigation }: any) {
     if (product) {
       handleSelectProduct(product);
     } else {
-      Alert.alert('Produk Tidak Ditemukan', `Barcode "${barcode}" tidak terdaftar. Tambah produk baru?`, [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Tambah', onPress: () => navigation.navigate('AddProduct', { barcode }) },
-      ]);
+      if (isOwner()) {
+        Alert.alert('Produk Tidak Ditemukan', `Barcode "${barcode}" tidak terdaftar. Tambah produk baru?`, [
+          { text: 'Batal', style: 'cancel' },
+          { text: 'Tambah', onPress: () => navigation.navigate('AddProduct', { barcode }) },
+        ]);
+      } else {
+        Alert.alert('Produk Tidak Ditemukan', `Barcode "${barcode}" tidak terdaftar. Hubungi Owner untuk mendaftarkan produk baru.`);
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import { getDatabase } from '../../database/database';
 import { Product } from '../../types';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency } from '../../utils/helpers';
 import BarcodeScanner from '../../components/BarcodeScanner';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
@@ -13,6 +14,7 @@ import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme
 export default function POSScreen({ navigation }: any) {
   const { items, manualItems, addItem, getTotal, getItemCount } = useCart();
   const { currentTheme } = useTheme();
+  const { user, canCreateTransactions } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -121,6 +123,21 @@ export default function POSScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
+      {/* Cashier Accountability Bar */}
+      <View style={styles.cashierBar}>
+        <View style={styles.cashierInfo}>
+          <Ionicons name="person-circle-outline" size={18} color={COLORS.secondary} />
+          <Text style={styles.cashierText}>
+            Kasir Bertugas: <Text style={styles.cashierName}>{user?.name || 'Kasir'}</Text>
+          </Text>
+        </View>
+        <View style={[styles.cashierRoleBadge, { backgroundColor: user?.role === 'owner' ? '#EDE7F6' : '#E0F2F1' }]}>
+          <Text style={[styles.cashierRoleText, { color: user?.role === 'owner' ? COLORS.tertiary : COLORS.secondary }]}>
+            {user?.role === 'owner' ? 'Owner' : 'Kasir'}
+          </Text>
+        </View>
+      </View>
+
       {/* Product Grid */}
       <FlatList
         data={filteredProducts}
@@ -136,7 +153,13 @@ export default function POSScreen({ navigation }: any) {
       {(items.length > 0 || manualItems.length > 0) && (
         <TouchableOpacity
           style={[styles.cartBar, { backgroundColor: currentTheme.primary }]}
-          onPress={() => navigation.navigate('Checkout')}
+          onPress={() => {
+            if (!canCreateTransactions()) {
+              Alert.alert('Akses Dibatasi', 'Akun Anda tidak aktif untuk memproses transaksi kasir.');
+              return;
+            }
+            navigation.navigate('Checkout');
+          }}
           activeOpacity={0.9}
         >
           <View style={styles.cartLeft}>
@@ -198,6 +221,39 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cashierBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    marginBottom: SPACING.xs,
+  },
+  cashierInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  cashierText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  cashierName: {
+    fontWeight: '600',
+    color: COLORS.onSurface,
+  },
+  cashierRoleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  cashierRoleText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   productList: {
     paddingHorizontal: SPACING.md,

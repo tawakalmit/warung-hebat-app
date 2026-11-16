@@ -11,6 +11,11 @@ interface AuthContextType {
   register: (username: string, password: string, name: string, role: UserRole) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   isOwner: () => boolean;
+  isKasir: () => boolean;
+  canManageProducts: () => boolean;
+  canCreateTransactions: () => boolean;
+  canExportData: () => boolean;
+  canAccessStoreSettings: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,8 +107,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user?.role === 'owner';
   }
 
+  function isKasir(): boolean {
+    return user?.role === 'kasir';
+  }
+
+  function canManageProducts(): boolean {
+    return user?.role === 'owner' && user?.is_active === 1;
+  }
+
+  function canCreateTransactions(): boolean {
+    return !!user && user.is_active === 1;
+  }
+
+  function canExportData(): boolean {
+    return user?.role === 'owner' && user?.is_active === 1;
+  }
+
+  function canAccessStoreSettings(): boolean {
+    return user?.role === 'owner' && user?.is_active === 1;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, isOwner }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        register,
+        logout,
+        isOwner,
+        isKasir,
+        canManageProducts,
+        canCreateTransactions,
+        canExportData,
+        canAccessStoreSettings,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

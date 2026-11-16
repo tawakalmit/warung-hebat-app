@@ -8,9 +8,11 @@ import { generateId } from '../../utils/helpers';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import EmptyState from '../../components/EmptyState';
+import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function SuppliersScreen() {
+  const { isOwner } = useAuth();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -91,9 +93,11 @@ export default function SuppliersScreen() {
               {item.phone && <Text style={styles.supplierDetail}>{item.phone}</Text>}
               {item.address && <Text style={styles.supplierDetail}>{item.address}</Text>}
             </View>
-            <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-            </TouchableOpacity>
+            {isOwner() && (
+              <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
+                <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
         contentContainerStyle={styles.listContent}
@@ -102,9 +106,11 @@ export default function SuppliersScreen() {
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowForm(true)} activeOpacity={0.8}>
-        <Ionicons name="add" size={24} color={COLORS.onPrimaryContainer} />
-      </TouchableOpacity>
+      {isOwner() && (
+        <TouchableOpacity style={styles.fab} onPress={() => setShowForm(true)} activeOpacity={0.8}>
+          <Ionicons name="add" size={24} color={COLORS.onPrimaryContainer} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

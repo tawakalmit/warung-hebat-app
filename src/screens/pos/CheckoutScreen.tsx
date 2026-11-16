@@ -12,7 +12,7 @@ import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme
 
 export default function CheckoutScreen({ navigation }: any) {
   const { items, manualItems, updateQuantity, removeItem, removeManualItem, getTotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, canCreateTransactions } = useAuth();
   const { currentTheme } = useTheme();
   const [discount, setDiscount] = useState('0');
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -54,6 +54,11 @@ export default function CheckoutScreen({ navigation }: any) {
   }
 
   async function handleCheckout() {
+    if (!canCreateTransactions()) {
+      Alert.alert('Akses Dibatasi', 'Akun Anda tidak aktif atau tidak memiliki izin memproses transaksi.');
+      return;
+    }
+
     if (payment < grandTotal) {
       Alert.alert('Error', 'Pembayaran kurang');
       return;
