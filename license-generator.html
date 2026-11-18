@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warung Hebat - License Token Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1E88E5;
+      --primary-dark: #1565C0;
+      --bg: #F4F6F9;
+      --surface: #FFFFFF;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --success: #10B981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 32px 16px;
+    }
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #E0F2FE;
+      color: var(--primary);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    p.sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.15);
+    }
+    .mono-input {
+      font-family: 'JetBrains Mono', monospace !important;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    button.btn-primary {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    button.btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    .token-card {
+      display: none;
+      background: #0F172A;
+      color: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+      border: 1px solid #334155;
+    }
+    .token-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      border-bottom: 1px dashed #334155;
+      padding-bottom: 12px;
+    }
+    .token-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #94A3B8;
+      text-transform: uppercase;
+    }
+    .token-badge {
+      background: #0284C7;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .token-digits {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      padding: 16px 8px;
+      letter-spacing: 2px;
+      color: #38BDF8;
+      background: #1E293B;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      user-select: all;
+    }
+    .token-meta {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .token-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-action {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .btn-copy {
+      background: #38BDF8;
+      color: #0F172A;
+    }
+    .btn-wa {
+      background: #22C55E;
+      color: white;
+    }
+    .toast {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0F172A;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      z-index: 99;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo-badge">⚡ STANDALONE GENERATOR (OFFLINE)</div>
+      <h1>Warung Hebat License Generator</h1>
+      <p class="sub">Halaman mandiri untuk men-generate 20 digit token aktivasi (mirip token listrik PLN)</p>
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="androidId">Android ID Perangkat Pengguna</label>
+        <input type="text" id="androidId" class="mono-input" placeholder="Contoh: 2306236B3BA9F49B atau 2306-236B-3BA9-F49B" autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="note">Catatan Nama Toko / Kasir (Opsional)</label>
+        <input type="text" id="note" placeholder="Contoh: Warung Bu Siti - Kasir 1">
+      </div>
+
+      <button class="btn-primary" onclick="handleGenerate()">
+        <span>⚡ Generate Token 20 Digit</span>
+      </button>
+
+      <div id="tokenCard" class="token-card">
+        <div class="token-header">
+          <span class="token-title">TOKEN AKTIVASI RESMI</span>
+          <span class="token-badge">PERMANEN (LIFETIME)</span>
+        </div>
+        <div id="tokenDigits" class="token-digits">0000 - 0000 - 0000 - 0000 - 0000</div>
+        <div id="tokenMeta" class="token-meta">
+          ID Perangkat: <strong id="metaId">-</strong><br>
+          Catatan: <span id="metaNote">-</span>
+        </div>
+        <div class="token-actions">
+          <button class="btn-action btn-copy" onclick="copyToken()">📋 Salin Token</button>
+          <a id="btnWa" class="btn-action btn-wa" href="#" target="_blank">💬 Kirim WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Token berhasil disalin ke clipboard!</div>
+
+  <script>
+    const MASTER_SALT = 'WARUNG_HEBAT_LICENSE_SALT_2026_OFFLINE_SECURE';
+    let currentToken = '';
+    let currentIdFormatted = '';
+
+    function formatDeviceId(deviceId) {
+      const cleaned = deviceId.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const parts = [];
+      for (let i = 0; i < cleaned.length; i += 4) {
+        parts.push(cleaned.slice(i, i + 4));
+      }
+      return parts.join('-');
+    }
+
+    async function generateToken(androidId) {
+      const cleanId = androidId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const textToHash = MASTER_SALT + ':' + cleanId;
+      
+      const encoder = new TextEncoder();
+      const data = encoder.encode(textToHash);
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      const chunks = [];
+      for (let i = 0; i < 5; i++) {
+        const hexChunk = hashHex.slice(i * 8, (i + 1) * 8);
+        const num = parseInt(hexChunk, 16);
+        chunks.push((num % 10000).toString().padStart(4, '0'));
+      }
+      return chunks.join('-');
+    }
+
+    async function handleGenerate() {
+      const rawId = document.getElementById('androidId').value.trim();
+      const note = document.getElementById('note').value.trim();
+
+      if (!rawId) {
+        alert('Silakan masukkan Android ID terlebih dahulu.');
+        return;
+      }
+
+      const cleanId = rawId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      currentIdFormatted = formatDeviceId(cleanId);
+      currentToken = await generateToken(cleanId);
+
+      document.getElementById('tokenDigits').innerText = currentToken;
+      document.getElementById('metaId').innerText = currentIdFormatted;
+      document.getElementById('metaNote').innerText = note || '-';
+      document.getElementById('tokenCard').style.display = 'block';
+
+      const waMsg = 'Halo! Berikut adalah Token Aktivasi Permanen aplikasi Warung Hebat untuk perangkat Anda (ID: ' + currentIdFormatted + '):\\n\\n*' + currentToken + '*\\n\\nMasukkan token ini ke aplikasi untuk langsung menggunakannya. Terima kasih!';
+      document.getElementById('btnWa').href = 'https://wa.me/?text=' + encodeURIComponent(waMsg);
+    }
+
+    function copyToken() {
+      if (!currentToken) return;
+      navigator.clipboard.writeText(currentToken);
+      showToast('Token ' + currentToken + ' berhasil disalin!');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }
+  </script>
+</body>
+</html>
