@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { transactionsApi } from '../../services/api';
 import { useCart } from '../../contexts/CartContext';
@@ -11,6 +12,7 @@ import Input from '../../components/Input';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function CheckoutScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { items, manualItems, updateQuantity, removeItem, removeManualItem, getTotal, clearCart } = useCart();
   const { user, canCreateTransactions } = useAuth();
   const { currentTheme } = useTheme();
@@ -269,7 +271,7 @@ export default function CheckoutScreen({ navigation }: any) {
       </ScrollView>
 
       {/* Bottom Action */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
         <Button
           title={`Bayar ${formatCurrency(grandTotal)}`}
           onPress={handleCheckout}

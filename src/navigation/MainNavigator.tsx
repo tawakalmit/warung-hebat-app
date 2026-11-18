@@ -1,6 +1,8 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { COLORS } from '../constants/theme';
@@ -104,6 +106,11 @@ export default function MainNavigator() {
 
 function MainTabs() {
   const { currentTheme } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  // Hitung padding bawah aman berdasarkan system navigation bar Android / Home indicator iOS
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
+  const tabHeight = 56 + bottomPadding;
 
   return (
     <Tab.Navigator
@@ -115,13 +122,15 @@ function MainTabs() {
           fontSize: 11,
           fontWeight: '500',
           letterSpacing: 0.5,
+          marginBottom: 4,
         },
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.divider,
-          paddingBottom: 6,
-          paddingTop: 6,
-          height: 64,
+          borderTopWidth: 1,
+          paddingTop: 8,
+          paddingBottom: bottomPadding,
+          height: tabHeight,
         },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
