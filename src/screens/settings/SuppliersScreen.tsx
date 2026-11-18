@@ -2,9 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { suppliersApi } from '../../services/api';
 import { Supplier } from '../../types';
-import { generateId } from '../../utils/helpers';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import EmptyState from '../../components/EmptyState';
@@ -26,9 +25,14 @@ export default function SuppliersScreen() {
   );
 
   async function loadSuppliers() {
-    const db = await getDatabase();
-    const results = await db.getAllAsync<Supplier>('SELECT * FROM suppliers ORDER BY name');
-    setSuppliers(results);
+    try {
+      const res = await suppliersApi.getAll();
+      if (res.success && res.data) {
+        setSuppliers(res.data);
+      }
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+    }
   }
 
   async function handleAdd() {
@@ -37,17 +41,20 @@ export default function SuppliersScreen() {
       return;
     }
 
-    const db = await getDatabase();
-    await db.runAsync(
-      'INSERT INTO suppliers (id, name, phone, address) VALUES (?, ?, ?, ?)',
-      [generateId(), name.trim(), phone || null, address || null]
-    );
-
-    setName('');
-    setPhone('');
-    setAddress('');
-    setShowForm(false);
-    loadSuppliers();
+    try {
+      const res = await suppliersApi.create(name.trim(), phone || undefined, address || undefined);
+      if (res.success) {
+        setName('');
+        setPhone('');
+        setAddress('');
+        setShowForm(false);
+        loadSuppliers();
+      } else {
+        Alert.alert('Gagal', res.message || 'Gagal menambahkan supplier');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Gagal menambahkan supplier');
+    }
   }
 
   async function handleDelete(supplier: Supplier) {
@@ -57,9 +64,16 @@ export default function SuppliersScreen() {
         text: 'Hapus',
         style: 'destructive',
         onPress: async () => {
-          const db = await getDatabase();
-          await db.runAsync('DELETE FROM suppliers WHERE id = ?', [supplier.id]);
-          loadSuppliers();
+          try {
+            const res = await suppliersApi.delete(supplier.id);
+            if (!res.success) {
+              Alert.alert('Gagal', res.message || 'Gagal menghapus supplier');
+            } else {
+              loadSuppliers();
+            }
+          } catch (error) {
+            Alert.alert('Error', 'Gagal menghapus supplier');
+          }
         },
       },
     ]);

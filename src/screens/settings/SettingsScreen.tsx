@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image } fr
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { getDatabase } from '../../database/database';
+import { settingsApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLicense } from '../../contexts/LicenseContext';
 import { StoreSettings } from '../../types';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -13,6 +14,7 @@ import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme
 
 export default function SettingsScreen({ navigation }: any) {
   const { user, logout, isOwner, canExportData, canAccessStoreSettings } = useAuth();
+  const { formattedDeviceId, isLicensed } = useLicense();
   const { currentTheme, setTheme, themes } = useTheme();
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
@@ -26,14 +28,17 @@ export default function SettingsScreen({ navigation }: any) {
   }, []);
 
   async function loadSettings() {
-    const db = await getDatabase();
-    const settings = await db.getFirstAsync<StoreSettings>('SELECT * FROM store_settings WHERE id = ?', ['default']);
-    if (settings) {
-      setStoreName(settings.store_name);
-      setAddress(settings.address || '');
-      setPhone(settings.phone || '');
-      setFooterNote(settings.footer_note);
-      setLogoUri(settings.logo_uri || null);
+    try {
+      const res = await settingsApi.get();
+      if (res.success && res.data) {
+        setStoreName(res.data.store_name);
+        setAddress(res.data.address || '');
+        setPhone(res.data.phone || '');
+        setFooterNote(res.data.footer_note || '');
+        setLogoUri(res.data.logo_uri || null);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
     }
   }
 
@@ -81,12 +86,19 @@ export default function SettingsScreen({ navigation }: any) {
     }
     setLoading(true);
     try {
-      const db = await getDatabase();
-      await db.runAsync(
-        `UPDATE store_settings SET store_name=?, address=?, phone=?, footer_note=?, logo_uri=?, updated_at=datetime('now','localtime') WHERE id='default'`,
-        [storeName, address || null, phone || null, footerNote, logoUri || null]
-      );
-      Alert.alert('Berhasil', 'Pengaturan toko berhasil disimpan');
+      const res = await settingsApi.update({
+        store_name: storeName,
+        address: address || undefined,
+        phone: phone || undefined,
+        footer_note: footerNote,
+        logo_uri: logoUri || undefined,
+      });
+
+      if (res.success) {
+        Alert.alert('Berhasil', 'Pengaturan toko berhasil disimpan');
+      } else {
+        Alert.alert('Gagal', res.message || 'Gagal menyimpan pengaturan');
+      }
     } catch (error) {
       Alert.alert('Error', 'Gagal menyimpan pengaturan');
     } finally {
@@ -267,6 +279,19 @@ export default function SettingsScreen({ navigation }: any) {
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textTertiary} />
               </TouchableOpacity>
             )}
+
+            <View style={styles.menuItem}>
+              <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+                <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.success} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuText}>Status Lisensi</Text>
+                <Text style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 2 }}>
+                  {isLicensed ? `Aktif Permanen (${formattedDeviceId})` : 'Belum Teraktivasi'}
+                </Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+            </View>
 
             <TouchableOpacity
               style={[styles.menuItem, { borderBottomWidth: 0 }]}

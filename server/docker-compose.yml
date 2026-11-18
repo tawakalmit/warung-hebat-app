@@ -1,0 +1,17 @@
+services:
+  warung-hebat-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warung-hebat-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=warung_hebat_super_secret_jwt_key_2026
+      - DATABASE_FILE=/app/data/warung_hebat.db
+      - CORS_ORIGIN=*
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads

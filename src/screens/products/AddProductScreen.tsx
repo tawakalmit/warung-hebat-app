@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { productsApi, categoriesApi } from '../../services/api';
 import { Category } from '../../types';
-import { generateId } from '../../utils/helpers';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import BarcodeScanner from '../../components/BarcodeScanner';
@@ -38,9 +37,14 @@ export default function AddProductScreen({ navigation, route }: any) {
   }, [canManageProducts]);
 
   async function loadCategories() {
-    const db = await getDatabase();
-    const results = await db.getAllAsync<Category>('SELECT * FROM categories ORDER BY name');
-    setCategories(results);
+    try {
+      const res = await categoriesApi.getAll();
+      if (res.success && res.data) {
+        setCategories(res.data);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
   }
 
   async function handleSave() {
@@ -59,34 +63,32 @@ export default function AddProductScreen({ navigation, route }: any) {
 
     setLoading(true);
     try {
-      const db = await getDatabase();
+      const payload = {
+        name: name.trim(),
+        barcode: barcode.trim() || undefined,
+        category_id: categoryId || undefined,
+        buy_price: parseFloat(buyPrice) || 0,
+        sell_price: parseFloat(sellPrice),
+        stock: parseInt(stock) || 0,
+        min_stock: parseInt(minStock) || 5,
+        unit: unit || 'pcs',
+      };
 
       if (editProduct) {
-        await db.runAsync(
-          `UPDATE products SET name=?, barcode=?, category_id=?, buy_price=?, sell_price=?, 
-           stock=?, min_stock=?, unit=?, updated_at=datetime('now','localtime') WHERE id=?`,
-          [name.trim(), barcode || null, categoryId || null, parseFloat(buyPrice) || 0, parseFloat(sellPrice), parseInt(stock) || 0, parseInt(minStock) || 5, unit, editProduct.id]
-        );
+        const res = await productsApi.update(editProduct.id, payload);
+        if (!res.success) {
+          Alert.alert('Gagal', res.message || 'Gagal memperbarui produk');
+          setLoading(false);
+          return;
+        }
         Alert.alert('Berhasil', 'Produk berhasil diperbarui');
       } else {
-        if (barcode) {
-          const existing = await db.getFirstAsync(
-            'SELECT id FROM products WHERE barcode = ? AND is_active = 1',
-            [barcode]
-          );
-          if (existing) {
-            Alert.alert('Error', 'Barcode sudah digunakan produk lain');
-            setLoading(false);
-            return;
-          }
+        const res = await productsApi.create(payload);
+        if (!res.success) {
+          Alert.alert('Gagal', res.message || 'Gagal menambahkan produk');
+          setLoading(false);
+          return;
         }
-
-        const id = generateId();
-        await db.runAsync(
-          `INSERT INTO products (id, name, barcode, category_id, buy_price, sell_price, stock, min_stock, unit)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [id, name.trim(), barcode || null, categoryId || null, parseFloat(buyPrice) || 0, parseFloat(sellPrice), parseInt(stock) || 0, parseInt(minStock) || 5, unit]
-        );
         Alert.alert('Berhasil', 'Produk berhasil ditambahkan');
       }
 

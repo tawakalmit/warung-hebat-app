@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { productsApi } from '../../services/api';
 import { Product } from '../../types';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -26,20 +26,29 @@ export default function POSScreen({ navigation }: any) {
   );
 
   async function loadProducts() {
-    const db = await getDatabase();
-    const results = await db.getAllAsync<Product>(
-      'SELECT * FROM products WHERE is_active = 1 AND stock > 0 ORDER BY name'
-    );
-    setProducts(results);
+    try {
+      const res = await productsApi.getAll({ only_in_stock: true });
+      if (res.success && res.data) {
+        setProducts(res.data);
+      }
+    } catch (error) {
+      console.error('Error loading products for POS:', error);
+    }
   }
 
   async function handleBarcodeScan(barcode: string) {
     setShowScanner(false);
-    const db = await getDatabase();
-    const product = await db.getFirstAsync<Product>(
-      'SELECT * FROM products WHERE barcode = ? AND is_active = 1',
-      [barcode]
-    );
+    let product = products.find(p => p.barcode === barcode);
+    if (!product) {
+      try {
+        const res = await productsApi.getAll({ search: barcode });
+        if (res.success && res.data && res.data.length > 0) {
+          product = res.data.find(p => p.barcode === barcode) || res.data[0];
+        }
+      } catch (err) {
+        console.error('Error searching barcode:', err);
+      }
+    }
 
     if (product) {
       if (product.stock <= 0) {

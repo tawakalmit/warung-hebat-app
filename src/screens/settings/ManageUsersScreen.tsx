@@ -13,13 +13,12 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { usersApi } from '../../services/api';
 import { User, UserRole } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import EmptyState from '../../components/EmptyState';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { generateId, hashPassword } from '../../utils/helpers';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 
 export default function ManageUsersScreen() {
@@ -45,11 +44,10 @@ export default function ManageUsersScreen() {
 
   async function loadUsers() {
     try {
-      const db = await getDatabase();
-      const results = await db.getAllAsync<User>(
-        'SELECT * FROM users ORDER BY role ASC, created_at DESC'
-      );
-      setUsers(results);
+      const res = await usersApi.getAll();
+      if (res.success && res.data) {
+        setUsers(res.data);
+      }
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -98,27 +96,13 @@ export default function ManageUsersScreen() {
     setFormError('');
 
     try {
-      const db = await getDatabase();
+      const res = await usersApi.create(trimmedUsername, password, trimmedName, role);
 
-      // Periksa apakah username sudah terdaftar
-      const existing = await db.getFirstAsync<{ id: string }>(
-        'SELECT id FROM users WHERE LOWER(username) = ?',
-        [trimmedUsername]
-      );
-
-      if (existing) {
-        setFormError('Username sudah digunakan oleh akun lain');
+      if (!res.success) {
+        setFormError(res.message || 'Gagal menambahkan pengguna');
         setSubmitting(false);
         return;
       }
-
-      const id = generateId();
-      const hashedPassword = hashPassword(password);
-
-      await db.runAsync(
-        'INSERT INTO users (id, username, password, name, role, is_active) VALUES (?, ?, ?, ?, ?, 1)',
-        [id, trimmedUsername, hashedPassword, trimmedName, role]
-      );
 
       setShowAddModal(false);
       resetForm();
@@ -126,7 +110,7 @@ export default function ManageUsersScreen() {
 
       Alert.alert(
         'Berhasil',
-        `Akun ${role === 'owner' ? 'Owner' : 'Kasir'} "${trimmedName}" (@${trimmedUsername}) berhasil didaftarkan.`
+        res.message || `Akun ${role === 'owner' ? 'Owner' : 'Kasir'} "${trimmedName}" (@${trimmedUsername}) berhasil didaftarkan.`
       );
     } catch (error) {
       console.error('Add user error:', error);
@@ -151,9 +135,12 @@ export default function ManageUsersScreen() {
         text: 'Ya',
         onPress: async () => {
           try {
-            const db = await getDatabase();
-            await db.runAsync('UPDATE users SET is_active = ? WHERE id = ?', [newStatus, targetUser.id]);
-            loadUsers();
+            const res = await usersApi.toggleStatus(targetUser.id);
+            if (!res.success) {
+              Alert.alert('Gagal', res.message || 'Gagal mengubah status');
+            } else {
+              loadUsers();
+            }
           } catch (error) {
             console.error('Toggle user status error:', error);
           }
@@ -178,12 +165,16 @@ export default function ManageUsersScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const db = await getDatabase();
-              await db.runAsync('DELETE FROM users WHERE id = ?', [targetUser.id]);
-              loadUsers();
+              const res = await usersApi.delete(targetUser.id);
+              if (!res.success) {
+                Alert.alert('Gagal', res.message || 'Gagal menghapus pengguna');
+              } else {
+                Alert.alert('Info', res.message || 'Pengguna berhasil dihapus');
+                loadUsers();
+              }
             } catch (error) {
               console.error('Delete user error:', error);
-              Alert.alert('Gagal', 'Tidak dapat menghapus pengguna yang memiliki riwayat transaksi');
+              Alert.alert('Gagal', 'Terjadi kesalahan saat menghapus pengguna');
             }
           },
         },

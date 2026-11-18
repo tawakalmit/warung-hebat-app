@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
-import { getDatabase } from '../../database/database';
+import { transactionsApi, settingsApi } from '../../services/api';
 import { Transaction, TransactionItem, StoreSettings } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import { BluetoothPrinterService } from '../../services/BluetoothPrinterService';
@@ -22,19 +22,20 @@ export default function ReceiptScreen({ navigation, route }: any) {
   }, []);
 
   async function loadReceipt() {
-    const db = await getDatabase();
-    const tx = await db.getFirstAsync<Transaction & { cashier_name?: string }>(
-      `SELECT t.*, u.name as cashier_name 
-       FROM transactions t 
-       LEFT JOIN users u ON t.user_id = u.id 
-       WHERE t.id = ?`,
-      [transactionId]
-    );
-    const txItems = await db.getAllAsync<TransactionItem>('SELECT * FROM transaction_items WHERE transaction_id = ?', [transactionId]);
-    const settings = await db.getFirstAsync<StoreSettings>('SELECT * FROM store_settings WHERE id = ?', ['default']);
-    setTransaction(tx);
-    setItems(txItems);
-    setStoreSettings(settings);
+    try {
+      const resTx = await transactionsApi.getById(transactionId);
+      if (resTx.success && resTx.data) {
+        setTransaction(resTx.data);
+        setItems(resTx.data.items || []);
+      }
+
+      const resSettings = await settingsApi.get();
+      if (resSettings.success && resSettings.data) {
+        setStoreSettings(resSettings.data);
+      }
+    } catch (error) {
+      console.error('Error loading receipt:', error);
+    }
   }
 
   async function handlePrint() {

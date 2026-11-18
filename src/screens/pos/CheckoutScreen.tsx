@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { transactionsApi } from '../../services/api';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { generateId, generateInvoiceNumber, formatCurrency } from '../../utils/helpers';
+import { formatCurrency } from '../../utils/helpers';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
@@ -71,44 +71,51 @@ export default function CheckoutScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      const db = await getDatabase();
-      const transactionId = generateId();
-      const invoiceNumber = generateInvoiceNumber();
+      const allItems = [
+        ...items.map(item => ({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.sell_price,
+          discount: item.discount || 0,
+          subtotal: item.subtotal,
+        })),
+        ...manualItems.map(item => ({
+          product_id: null,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          discount: 0,
+          subtotal: item.subtotal,
+        })),
+      ];
 
-      await db.runAsync(
-        `INSERT INTO transactions (id, invoice_number, total_amount, discount, tax, grand_total, payment_amount, change_amount, payment_method, customer_name, user_id)
-         VALUES (?, ?, ?, ?, 0, ?, ?, ?, 'cash', ?, ?)`,
-        [transactionId, invoiceNumber, subtotal, discountAmount, grandTotal, payment, change, customerName || null, user!.id]
-      );
+      const res = await transactionsApi.checkout({
+        items: allItems,
+        total_amount: subtotal,
+        discount: discountAmount,
+        grand_total: grandTotal,
+        payment_amount: payment,
+        change_amount: change,
+        payment_method: 'cash',
+        customer_name: customerName.trim() || undefined,
+      });
 
-      // Insert product items
-      for (const item of items) {
-        await db.runAsync(
-          `INSERT INTO transaction_items (id, transaction_id, product_id, product_name, quantity, price, discount, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [generateId(), transactionId, item.product.id, item.product.name, item.quantity, item.product.sell_price, item.discount, item.subtotal]
-        );
-
-        await db.runAsync(
-          'UPDATE products SET stock = stock - ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?',
-          [item.quantity, item.product.id]
-        );
+      if (res.success && res.data) {
+        clearCart();
+        navigation.replace('Receipt', {
+          transactionId: res.data.transactionId,
+          invoiceNumber: res.data.invoiceNumber,
+          grandTotal: res.data.grandTotal,
+          payment: res.data.payment,
+          change: res.data.change,
+        });
+      } else {
+        Alert.alert('Gagal', res.message || 'Gagal memproses transaksi');
       }
-
-      // Insert manual items (product_id NULL karena bukan produk terdaftar)
-      for (const item of manualItems) {
-        await db.runAsync(
-          `INSERT INTO transaction_items (id, transaction_id, product_id, product_name, quantity, price, discount, subtotal)
-           VALUES (?, ?, NULL, ?, ?, ?, 0, ?)`,
-          [generateId(), transactionId, item.name, item.quantity, item.price, item.subtotal]
-        );
-      }
-
-      clearCart();
-      navigation.replace('Receipt', { transactionId, invoiceNumber, grandTotal, payment, change });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      Alert.alert('Error', 'Gagal memproses transaksi');
+      Alert.alert('Error', error.message || 'Gagal memproses transaksi');
     } finally {
       setLoading(false);
     }

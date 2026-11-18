@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDatabase } from '../database/database';
 import { User, UserRole } from '../types';
-import { generateId, hashPassword } from '../utils/helpers';
+import { authApi, getAuthToken, setAuthToken, removeAuthToken } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -30,9 +29,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadUser() {
     try {
+      const token = await getAuthToken();
       const userData = await AsyncStorage.getItem('current_user');
       if (userData) {
         setUser(JSON.parse(userData));
+      }
+
+      if (token) {
+        const res = await authApi.getMe();
+        const me = res.user || res.data;
+        if (res.success && me) {
+          setUser(me);
+          await AsyncStorage.setItem('current_user', JSON.stringify(me));
+        } else if (!res.success) {
+          // Token expired atau tidak valid
+          await removeAuthToken();
+          await AsyncStorage.removeItem('current_user');
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -43,24 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(username: string, password: string): Promise<{ success: boolean; message: string }> {
     try {
-      const db = await getDatabase();
-      const hashedPassword = hashPassword(password);
+      const res = await authApi.login(username.trim(), password);
 
-      const result = await db.getFirstAsync<User>(
-        'SELECT * FROM users WHERE username = ? AND password = ? AND is_active = 1',
-        [username, hashedPassword]
-      );
-
-      if (result) {
-        setUser(result);
-        await AsyncStorage.setItem('current_user', JSON.stringify(result));
+      if (res.success && res.token && res.user) {
+        setUser(res.user);
+        await setAuthToken(res.token);
+        await AsyncStorage.setItem('current_user', JSON.stringify(res.user));
         return { success: true, message: 'Login berhasil' };
       }
 
-      return { success: false, message: 'Username atau password salah' };
-    } catch (error) {
+      return { success: false, message: res.message || 'Username atau password salah' };
+    } catch (error: any) {
       console.error('Login error:', error);
-      return { success: false, message: 'Terjadi kesalahan saat login' };
+      return { success: false, message: error?.message || 'Terjadi kesalahan saat login' };
     }
   }
 
@@ -71,35 +80,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const db = await getDatabase();
+      const res = await authApi.register(username.trim(), password, name.trim(), role);
 
-      // Check if username exists
-      const existing = await db.getFirstAsync(
-        'SELECT id FROM users WHERE username = ?',
-        [username]
-      );
-
-      if (existing) {
-        return { success: false, message: 'Username sudah digunakan' };
+      if (res.success) {
+        const registeredUser = res.user || res.data;
+        if (res.token && registeredUser) {
+          setUser(registeredUser);
+          await setAuthToken(res.token);
+          await AsyncStorage.setItem('current_user', JSON.stringify(registeredUser));
+        }
+        return { success: true, message: res.message || 'Registrasi berhasil' };
       }
 
-      const id = generateId();
-      const hashedPassword = hashPassword(password);
-
-      await db.runAsync(
-        'INSERT INTO users (id, username, password, name, role) VALUES (?, ?, ?, ?, ?)',
-        [id, username, hashedPassword, name, role]
-      );
-
-      return { success: true, message: 'Registrasi berhasil' };
-    } catch (error) {
+      return { success: false, message: res.message || 'Terjadi kesalahan saat registrasi' };
+    } catch (error: any) {
       console.error('Register error:', error);
-      return { success: false, message: 'Terjadi kesalahan saat registrasi' };
+      return { success: false, message: error?.message || 'Terjadi kesalahan saat registrasi' };
     }
   }
 
   async function logout() {
     setUser(null);
+    await removeAuthToken();
     await AsyncStorage.removeItem('current_user');
   }
 

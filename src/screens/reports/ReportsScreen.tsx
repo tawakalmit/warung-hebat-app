@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { reportsApi } from '../../services/api';
 import Card from '../../components/Card';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 import { formatCurrency, getMonthName } from '../../utils/helpers';
@@ -26,36 +26,37 @@ export default function ReportsScreen({ navigation }: any) {
   );
 
   async function loadReports() {
-    const db = await getDatabase();
+    try {
+      const [resDaily, resMonthly, resYearly] = await Promise.all([
+        reportsApi.getDaily(),
+        reportsApi.getMonthly(),
+        reportsApi.getYearly(),
+      ]);
 
-    const daily = await db.getAllAsync<DailyReport>(
-      `SELECT date(created_at) as date, SUM(grand_total) as total, COUNT(*) as count
-       FROM transactions WHERE created_at >= date('now', '-30 days')
-       GROUP BY date(created_at) ORDER BY date DESC`
-    );
-    setDailyData(daily);
+      const daily = (resDaily.success && resDaily.data) || [];
+      const monthly = (resMonthly.success && resMonthly.data) || [];
+      const yearly = (resYearly.success && resYearly.data) || [];
 
-    const monthly = await db.getAllAsync<MonthlyReport>(
-      `SELECT strftime('%Y-%m', created_at) as month, SUM(grand_total) as total, COUNT(*) as count
-       FROM transactions WHERE created_at >= date('now', '-12 months')
-       GROUP BY strftime('%Y-%m', created_at) ORDER BY month DESC`
-    );
-    setMonthlyData(monthly);
+      setDailyData(daily);
+      setMonthlyData(monthly);
+      setYearlyData(yearly);
 
-    const yearly = await db.getAllAsync<MonthlyReport>(
-      `SELECT strftime('%Y', created_at) as month, SUM(grand_total) as total, COUNT(*) as count
-       FROM transactions GROUP BY strftime('%Y', created_at) ORDER BY month DESC`
-    );
-    setYearlyData(yearly);
+      let currentList: (DailyReport | MonthlyReport)[] = daily;
+      if (period === 'monthly') currentList = monthly;
+      if (period === 'yearly') currentList = yearly;
 
-    const sum = await db.getFirstAsync<{ total: number; count: number }>(
-      'SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count FROM transactions'
-    );
-    setSummary({
-      totalRevenue: sum?.total || 0,
-      totalTransactions: sum?.count || 0,
-      avgTransaction: sum?.count ? (sum.total / sum.count) : 0,
-    });
+      const totalRevenue = currentList.reduce((acc, curr) => acc + curr.total, 0);
+      const totalTransactions = currentList.reduce((acc, curr) => acc + curr.count, 0);
+      const avgTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+      setSummary({
+        totalRevenue,
+        totalTransactions,
+        avgTransaction,
+      });
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    }
   }
 
   function getCurrentData() {

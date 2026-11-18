@@ -2,9 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { productsApi, stockInApi } from '../../services/api';
 import { Product } from '../../types';
-import { generateId, formatCurrency } from '../../utils/helpers';
+import { formatCurrency } from '../../utils/helpers';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import BarcodeScanner from '../../components/BarcodeScanner';
@@ -29,9 +29,14 @@ export default function StockInScreen({ navigation }: any) {
   );
 
   async function loadData() {
-    const db = await getDatabase();
-    const prods = await db.getAllAsync<Product>('SELECT * FROM products WHERE is_active = 1 ORDER BY name');
-    setProducts(prods);
+    try {
+      const res = await productsApi.getAll();
+      if (res.success && res.data) {
+        setProducts(res.data);
+      }
+    } catch (error) {
+      console.error('Error loading products for stock in:', error);
+    }
   }
 
   function handleSelectProduct(product: Product) {
@@ -42,11 +47,17 @@ export default function StockInScreen({ navigation }: any) {
 
   async function handleBarcodeScan(barcode: string) {
     setShowScanner(false);
-    const db = await getDatabase();
-    const product = await db.getFirstAsync<Product>(
-      'SELECT * FROM products WHERE barcode = ? AND is_active = 1',
-      [barcode]
-    );
+    let product = products.find(p => p.barcode === barcode);
+    if (!product) {
+      try {
+        const res = await productsApi.getAll({ search: barcode });
+        if (res.success && res.data && res.data.length > 0) {
+          product = res.data.find(p => p.barcode === barcode) || res.data[0];
+        }
+      } catch (err) {
+        console.error('Error scanning barcode:', err);
+      }
+    }
 
     if (product) {
       handleSelectProduct(product);
@@ -74,21 +85,20 @@ export default function StockInScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      const db = await getDatabase();
       const qty = parseInt(quantity);
       const price = parseFloat(buyPrice) || 0;
-      const total = qty * price;
 
-      await db.runAsync(
-        `INSERT INTO stock_in (id, product_id, supplier_id, quantity, buy_price, total, note, user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [generateId(), selectedProduct.id, null, qty, price, total, note || null, user!.id]
-      );
+      const res = await stockInApi.create({
+        product_id: selectedProduct.id,
+        quantity: qty,
+        buy_price: price,
+        note: note || undefined,
+      });
 
-      await db.runAsync(
-        `UPDATE products SET stock = stock + ?, buy_price = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
-        [qty, price, selectedProduct.id]
-      );
+      if (!res.success) {
+        Alert.alert('Gagal', res.message || 'Gagal menyimpan stok masuk');
+        return;
+      }
 
       Alert.alert('Berhasil', `Stok ${selectedProduct.name} bertambah ${qty} ${selectedProduct.unit}`);
       setSelectedProduct(null);
@@ -97,7 +107,8 @@ export default function StockInScreen({ navigation }: any) {
       setNote('');
       loadData();
     } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan data barang masuk');
+      console.error('Error saving stock in:', error);
+      Alert.alert('Error', 'Gagal menyimpan stok masuk');
     } finally {
       setLoading(false);
     }

@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getDatabase } from '../../database/database';
+import { reportsApi, settingsApi } from '../../services/api';
 import { StoreSettings } from '../../types';
 import { COLORS, SPACING, BORDER_RADIUS, ELEVATION } from '../../constants/theme';
 import { formatCurrency } from '../../utils/helpers';
@@ -33,11 +33,10 @@ export default function DashboardScreen({ navigation }: any) {
 
   async function loadStoreInfo() {
     try {
-      const db = await getDatabase();
-      const settings = await db.getFirstAsync<StoreSettings>('SELECT * FROM store_settings WHERE id = ?', ['default']);
-      if (settings) {
-        setLogoUri(settings.logo_uri || null);
-        setStoreName(settings.store_name);
+      const res = await settingsApi.get();
+      if (res.success && res.data) {
+        setLogoUri(res.data.logo_uri || null);
+        setStoreName(res.data.store_name);
       }
     } catch (error) {
       console.error('Error loading store info:', error);
@@ -46,38 +45,10 @@ export default function DashboardScreen({ navigation }: any) {
 
   async function loadStats() {
     try {
-      const db = await getDatabase();
-      const today = new Date().toISOString().split('T')[0];
-      const monthStart = today.slice(0, 7) + '-01';
-
-      const todayResult = await db.getFirstAsync<{ total: number; count: number }>(
-        `SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count 
-         FROM transactions WHERE date(created_at) = date(?)`,
-        [today]
-      );
-
-      const productsResult = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM products WHERE is_active = 1'
-      );
-
-      const lowStockResult = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM products WHERE stock <= min_stock AND is_active = 1'
-      );
-
-      const monthResult = await db.getFirstAsync<{ total: number; count: number }>(
-        `SELECT COALESCE(SUM(grand_total), 0) as total, COUNT(*) as count 
-         FROM transactions WHERE date(created_at) >= date(?)`,
-        [monthStart]
-      );
-
-      setStats({
-        todaySales: todayResult?.total || 0,
-        todayTransactions: todayResult?.count || 0,
-        totalProducts: productsResult?.count || 0,
-        lowStockCount: lowStockResult?.count || 0,
-        monthSales: monthResult?.total || 0,
-        monthTransactions: monthResult?.count || 0,
-      });
+      const res = await reportsApi.getDashboardStats();
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
     }

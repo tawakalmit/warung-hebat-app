@@ -10,3 +10,8 @@ dist
 *.mobileprovision
 *.orig.*
 web-build/
+.env
+.DS_Store
+server/dist
+server/data
+server/uploads

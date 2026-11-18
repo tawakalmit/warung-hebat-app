@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { productsApi } from '../../services/api';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/helpers';
 import EmptyState from '../../components/EmptyState';
@@ -34,11 +34,11 @@ export default function ProductsScreen({ navigation }: any) {
 
   async function loadProducts() {
     try {
-      const db = await getDatabase();
-      const results = await db.getAllAsync<Product>(
-        'SELECT * FROM products WHERE is_active = 1 ORDER BY name ASC'
-      );
-      setProducts(results);
+      setLoading(true);
+      const res = await productsApi.getAll();
+      if (res.success && res.data) {
+        setProducts(res.data);
+      }
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -61,9 +61,12 @@ export default function ProductsScreen({ navigation }: any) {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
-            const db = await getDatabase();
-            await db.runAsync('UPDATE products SET is_active = 0 WHERE id = ?', [product.id]);
-            loadProducts();
+            const res = await productsApi.delete(product.id);
+            if (!res.success) {
+              Alert.alert('Gagal', res.message || 'Gagal menghapus produk');
+            } else {
+              loadProducts();
+            }
           },
         },
       ]

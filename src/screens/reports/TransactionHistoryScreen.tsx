@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDatabase } from '../../database/database';
+import { transactionsApi } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Transaction, TransactionItem } from '../../types';
 import { formatCurrency, formatDate, formatDateShort } from '../../utils/helpers';
@@ -60,28 +60,23 @@ export default function TransactionHistoryScreen() {
 
   async function loadTransactions() {
     try {
-      const db = await getDatabase();
       const dateFilter = getDateFilter();
+      const res = await transactionsApi.getAll({
+        start_date: dateFilter,
+        limit: 100,
+      });
 
-      let query: string;
-      if (period === 'daily') {
-        query = `SELECT t.*, u.name as user_name FROM transactions t 
-                 LEFT JOIN users u ON t.user_id = u.id 
-                 WHERE date(t.created_at) = date(?) 
-                 ORDER BY t.created_at DESC`;
-      } else {
-        query = `SELECT t.*, u.name as user_name FROM transactions t 
-                 LEFT JOIN users u ON t.user_id = u.id 
-                 WHERE date(t.created_at) >= date(?) 
-                 ORDER BY t.created_at DESC`;
+      if (res.success && res.data) {
+        const mapped = res.data.map((tx: any) => ({
+          ...tx,
+          user_name: tx.cashier_name || tx.user_name || 'Kasir',
+        }));
+        setTransactions(mapped);
+
+        // Calculate summary
+        const total = mapped.reduce((sum: number, tx: any) => sum + (tx.grand_total || 0), 0);
+        setSummary({ count: mapped.length, total });
       }
-
-      const results = await db.getAllAsync<TransactionWithUser>(query, [dateFilter]);
-      setTransactions(results);
-
-      // Calculate summary
-      const total = results.reduce((sum, tx) => sum + tx.grand_total, 0);
-      setSummary({ count: results.length, total });
     } catch (error) {
       console.error('Error loading transactions:', error);
     }
@@ -89,14 +84,12 @@ export default function TransactionHistoryScreen() {
 
   async function handleViewDetail(tx: TransactionWithUser) {
     try {
-      const db = await getDatabase();
-      const items = await db.getAllAsync<TransactionItem>(
-        'SELECT * FROM transaction_items WHERE transaction_id = ?',
-        [tx.id]
-      );
-      setSelectedTx(tx);
-      setSelectedItems(items);
-      setShowDetail(true);
+      const res = await transactionsApi.getById(tx.id);
+      if (res.success && res.data) {
+        setSelectedTx(tx);
+        setSelectedItems(res.data.items || []);
+        setShowDetail(true);
+      }
     } catch (error) {
       console.error('Error loading transaction detail:', error);
     }
