@@ -59,8 +59,9 @@ export default function ActivationScreen() {
   }
 
   async function handleSendWhatsApp() {
+    const adminPhone = '6281321486324';
     const message = `Halo Admin Warung Hebat, saya ingin meminta token aktivasi aplikasi untuk perangkat dengan ID:\n\n*${formattedDeviceId || deviceId}*\n\nTerima kasih.`;
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
@@ -115,7 +116,7 @@ export default function ActivationScreen() {
           />
           <Text style={styles.appName}>Warung Hebat</Text>
           <View style={styles.badge}>
-            <Ionicons name="key" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Ionicons name="key" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
             <Text style={styles.badgeText}>Aktivasi Lisensi Perangkat</Text>
           </View>
           <Text style={styles.subtitle}>
@@ -148,9 +149,9 @@ export default function ActivationScreen() {
               <Ionicons
                 name={copied ? 'checkmark-circle' : 'copy-outline'}
                 size={18}
-                color={copied ? COLORS.success : COLORS.primary}
+                color="#FFFFFF"
               />
-              <Text style={[styles.actionButtonText, copied && { color: COLORS.success }]}>
+              <Text style={styles.actionButtonText}>
                 {copied ? 'Tersalin!' : 'Salin ID'}
               </Text>
             </TouchableOpacity>
@@ -286,9 +287,9 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primaryLight || '#E8F5E9',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
     marginTop: 6,
     marginBottom: SPACING.sm,
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: '#FFFFFF',
   },
   subtitle: {
     fontSize: 13,
@@ -361,21 +362,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   copyButton: {
-    backgroundColor: COLORS.primaryLight || '#E8F5E9',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
   },
   copyButtonSuccess: {
-    backgroundColor: '#E8F8F0',
-    borderColor: COLORS.success,
+    backgroundColor: COLORS.success,
   },
   waButton: {
     backgroundColor: '#25D366',
   },
   actionButtonText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.primary,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   tokenInputContainer: {
     backgroundColor: COLORS.background,
