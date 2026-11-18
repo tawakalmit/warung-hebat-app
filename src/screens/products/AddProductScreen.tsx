@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { productsApi, categoriesApi } from '../../services/api';
 import { Category } from '../../types';
@@ -109,8 +109,18 @@ export default function AddProductScreen({ navigation, route }: any) {
   const units = ['pcs', 'kg', 'liter', 'pack', 'dus', 'botol', 'sachet', 'bungkus'];
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
         {/* Barcode Section */}
         <View style={styles.barcodeSection}>
           <Input
@@ -224,7 +234,8 @@ export default function AddProductScreen({ navigation, route }: any) {
         onScan={handleBarcodeScan}
         onClose={() => setShowScanner(false)}
       />
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -232,6 +243,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingBottom: 60,
   },
   content: {
     padding: SPACING.md,

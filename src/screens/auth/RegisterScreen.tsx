@@ -62,6 +62,7 @@ export default function RegisterScreen({ navigation }: Props) {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

@@ -34,9 +34,15 @@ export default function Input({
         <TextInput
           style={[styles.input, leftIcon ? { paddingLeft: 0 } : undefined]}
           placeholderTextColor={COLORS.placeholder}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           {...props}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
         />
         {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
       </View>

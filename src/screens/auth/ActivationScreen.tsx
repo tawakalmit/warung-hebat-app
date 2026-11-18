@@ -105,6 +105,7 @@ export default function ActivationScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -210,23 +211,16 @@ export default function ActivationScreen() {
             </View>
           </View>
 
-          {/* Hidden TextInput overlaid to capture keystrokes naturally */}
+          {/* TextInput to capture keystrokes */}
           <View style={styles.actualInputWrapper}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={styles.keypadTapTarget}
-              onPress={() => {}}
-            >
-              <Input
-                label="Ketik atau tempel token di sini"
-                value={tokenInput}
-                onChangeText={handleTokenChange}
-                placeholder="Contoh: 12345678..."
-                keyboardType="number-pad"
-                maxLength={24} // 20 digits + 4 hyphens
-                autoFocus={true}
-              />
-            </TouchableOpacity>
+            <Input
+              label="Ketik atau tempel token di sini"
+              value={tokenInput}
+              onChangeText={handleTokenChange}
+              placeholder="Contoh: 12345678..."
+              keyboardType="number-pad"
+              maxLength={24} // 20 digits + 4 hyphens
+            />
           </View>
 
           {/* Error Message */}

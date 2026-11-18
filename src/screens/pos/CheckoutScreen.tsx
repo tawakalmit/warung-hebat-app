@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { transactionsApi } from '../../services/api';
@@ -130,8 +130,17 @@ export default function CheckoutScreen({ navigation }: any) {
   const themeColor = currentTheme.primary;
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContainerContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Cart Items */}
         <Text style={styles.sectionTitle}>Keranjang</Text>
         {items.map(item => (
@@ -284,7 +293,10 @@ export default function CheckoutScreen({ navigation }: any) {
 
       {/* Manual Item Modal */}
       <Modal visible={showManualForm} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Tambah Barang Manual</Text>
@@ -330,9 +342,9 @@ export default function CheckoutScreen({ navigation }: any) {
               style={{ marginTop: SPACING.sm }}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -344,6 +356,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
     padding: SPACING.md,
+  },
+  scrollContainerContent: {
+    paddingBottom: 40,
   },
   sectionTitle: {
     fontSize: 14,

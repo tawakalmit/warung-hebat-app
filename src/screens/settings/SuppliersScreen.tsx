@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { suppliersApi } from '../../services/api';
@@ -80,7 +80,10 @@ export default function SuppliersScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {showForm && (
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Tambah Supplier</Text>
@@ -97,6 +100,7 @@ export default function SuppliersScreen() {
       <FlatList
         data={suppliers}
         keyExtractor={item => item.id}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.supplierCard}>
             <View style={styles.supplierAvatar}>
@@ -125,7 +129,7 @@ export default function SuppliersScreen() {
           <Ionicons name="add" size={24} color={COLORS.onPrimaryContainer} />
         </TouchableOpacity>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
