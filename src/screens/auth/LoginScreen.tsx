@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,10 +9,12 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<any>;
+  route?: any;
 };
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation, route }: Props) {
   const { login } = useAuth();
+  const selectedRole = route?.params?.role as 'owner' | 'kasir' | undefined;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +48,18 @@ export default function LoginScreen({ navigation }: Props) {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
+        {/* Navigation Back Button if available */}
+        {navigation.canGoBack() && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+            <Text style={styles.backButtonText}>Pilih Peran Lain</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Logo Section */}
         <View style={styles.header}>
           <Image
@@ -54,7 +68,31 @@ export default function LoginScreen({ navigation }: Props) {
             resizeMode="contain"
           />
           <Text style={styles.appName}>Warung Hebat</Text>
-          <Text style={styles.subtitle}>Masuk ke akun Anda</Text>
+          {selectedRole ? (
+            <View
+              style={[
+                styles.roleBadge,
+                selectedRole === 'owner' ? styles.ownerRoleBadge : styles.kasirRoleBadge,
+              ]}
+            >
+              <Ionicons
+                name={selectedRole === 'owner' ? 'shield-checkmark' : 'calculator'}
+                size={14}
+                color={selectedRole === 'owner' ? COLORS.primary : COLORS.secondary}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  selectedRole === 'owner' ? styles.ownerRoleBadgeText : styles.kasirRoleBadgeText,
+                ]}
+              >
+                Masuk sebagai {selectedRole === 'owner' ? 'Owner' : 'Kasir'}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.subtitle}>Masuk ke akun Anda</Text>
+          )}
         </View>
 
         {/* Form */}
@@ -109,7 +147,7 @@ export default function LoginScreen({ navigation }: Props) {
 
           <Button
             title="Buat Akun Baru"
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.navigate('Register', { role: selectedRole })}
             variant="outlined"
             size="large"
           />
@@ -128,6 +166,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: SPACING.lg,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.md,
+    paddingVertical: SPACING.xs,
+    gap: 6,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
   },
   header: {
     alignItems: 'center',
@@ -150,6 +202,30 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
     letterSpacing: 0.25,
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginTop: SPACING.xs,
+  },
+  ownerRoleBadge: {
+    backgroundColor: COLORS.primaryContainer,
+  },
+  kasirRoleBadge: {
+    backgroundColor: '#E0F2F1',
+  },
+  roleBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  ownerRoleBadgeText: {
+    color: COLORS.onPrimaryContainer,
+  },
+  kasirRoleBadgeText: {
+    color: '#00695C',
   },
   formContainer: {
     width: '100%',

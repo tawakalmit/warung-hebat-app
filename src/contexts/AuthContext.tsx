@@ -41,6 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.success && me) {
           setUser(me);
           await AsyncStorage.setItem('current_user', JSON.stringify(me));
+          if (me.role === 'owner') {
+            await AsyncStorage.setItem('has_owner_registered', 'true');
+          }
         } else if (!res.success) {
           // Token expired atau tidak valid
           await removeAuthToken();
@@ -63,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         await setAuthToken(res.token);
         await AsyncStorage.setItem('current_user', JSON.stringify(res.user));
+        if (res.user.role === 'owner') {
+          await AsyncStorage.setItem('has_owner_registered', 'true');
+        }
         return { success: true, message: 'Login berhasil' };
       }
 
@@ -88,6 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(registeredUser);
           await setAuthToken(res.token);
           await AsyncStorage.setItem('current_user', JSON.stringify(registeredUser));
+        }
+        if (registeredUser?.role === 'owner' || role === 'owner') {
+          await AsyncStorage.setItem('has_owner_registered', 'true');
         }
         return { success: true, message: res.message || 'Registrasi berhasil' };
       }

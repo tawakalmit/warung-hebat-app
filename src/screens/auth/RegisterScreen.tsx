@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/Button';
@@ -10,15 +11,17 @@ import { UserRole } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<any>;
+  route?: any;
 };
 
-export default function RegisterScreen({ navigation }: Props) {
+export default function RegisterScreen({ navigation, route }: Props) {
   const { register } = useAuth();
+  const initialRole = route?.params?.role as UserRole | undefined;
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('kasir');
+  const [role, setRole] = useState<UserRole>(initialRole || 'owner');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,8 +47,11 @@ export default function RegisterScreen({ navigation }: Props) {
 
     const result = await register(username.trim(), password, name.trim(), role);
     if (result.success) {
+      if (role === 'owner') {
+        await AsyncStorage.setItem('has_owner_registered', 'true');
+      }
       Alert.alert('Berhasil', 'Akun berhasil dibuat. Silakan login.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => navigation.navigate('Login', { role }) },
       ]);
     } else {
       setError(result.message);

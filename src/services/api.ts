@@ -73,6 +73,8 @@ export async function apiRequest<T = any>(
 
 // 1. Auth API
 export const authApi = {
+  checkOwner: () => apiRequest<{ hasOwner: boolean }>('/api/auth/check-owner'),
+
   login: (username: string, password: string) =>
     apiRequest<{ token: string; user: User }>('/api/auth/login', {
       method: 'POST',

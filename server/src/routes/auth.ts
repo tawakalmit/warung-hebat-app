@@ -5,6 +5,25 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
+// Check if at least one owner account exists
+router.get('/check-owner', (req: Request, res: Response) => {
+  try {
+    const owner = db
+      .prepare("SELECT id FROM users WHERE role = 'owner' LIMIT 1")
+      .get();
+
+    return res.json({
+      success: true,
+      hasOwner: !!owner,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Gagal memeriksa akun owner',
+    });
+  }
+});
+
 // Login
 router.post('/login', (req: Request, res: Response) => {
   const { username, password } = req.body;
