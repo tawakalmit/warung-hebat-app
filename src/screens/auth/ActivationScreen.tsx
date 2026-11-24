@@ -59,7 +59,7 @@ export default function ActivationScreen() {
   }
 
   async function handleSendWhatsApp() {
-    const adminPhone = '6281321486324';
+    const adminPhone = '6285711873489';
     const message = `Halo Admin Warung Hebat, saya ingin meminta token aktivasi aplikasi untuk perangkat dengan ID:\n\n*${formattedDeviceId || deviceId}*\n\nTerima kasih.`;
     const url = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
     try {
